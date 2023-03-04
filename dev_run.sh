@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p /mnt/host
 
 pip install -r requirements.txt
 
