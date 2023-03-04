@@ -1,5 +1,8 @@
 #!/bin/bash
 
+apt -y update
+apt -y install python3 python3-dev python3-pip
+
 mkdir -p /mnt/host
 
 pip install -r requirements.txt
