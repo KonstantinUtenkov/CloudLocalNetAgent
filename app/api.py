@@ -48,7 +48,8 @@ meminfo = dict((i.split()[0].rstrip(':'),int(i.split()[1])) for i in open('/proc
 mem_kib = meminfo['MemTotal']
 HOST_MEM = round(mem_kib/1024/1024,1)
 
-BACK="http://192.168.1.55:8000"
+#BACK="http://192.168.1.55:8000"
+BACK="http://dev.cloudlocalnet.com:8000"
 
 vms = [
     {
@@ -67,9 +68,12 @@ app = FastAPI()
 origins = [
     "http://192.168.1.49:5000",
     "192.168.1.49:5000",
-    "dev.cloudlocalnet.com",
-    "staging.cloudlocalnet.com",
-    "*.cloudlocalnet.com",
+    "http://dev.cloudlocalnet.com",
+    "http://staging.cloudlocalnet.com",
+    "http://*.cloudlocalnet.com",
+    "https://dev.cloudlocalnet.com",
+    "https://staging.cloudlocalnet.com",
+    "https://*.cloudlocalnet.com",
     "*"
 ]
 
