@@ -66,21 +66,14 @@ vms = [
 app = FastAPI()
 
 origins = [
-    "http://192.168.1.49:5000",
-    "192.168.1.49:5000",
-    "http://dev.cloudlocalnet.com",
-    "http://staging.cloudlocalnet.com",
-    "http://*.cloudlocalnet.com",
-    "https://dev.cloudlocalnet.com",
-    "https://staging.cloudlocalnet.com",
-    "https://*.cloudlocalnet.com",
     "*"
 ]
 
 
 app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=["*"],
+        #allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"]
