@@ -67,6 +67,9 @@ app = FastAPI()
 origins = [
     "http://192.168.1.49:5000",
     "192.168.1.49:5000",
+    "dev.cloudlocalnet.com",
+    "staging.cloudlocalnet.com",
+    "*.cloudlocalnet.com",
     "*"
 ]
 
