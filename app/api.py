@@ -49,7 +49,8 @@ mem_kib = meminfo['MemTotal']
 HOST_MEM = round(mem_kib/1024/1024,1)
 
 #BACK="http://192.168.1.55:8000"
-BACK="http://dev.cloudlocalnet.com:8000"
+#BACK="http://dev.cloudlocalnet.com:8000"
+BACK="https://dev.cloudlocalnet.com"
 
 vms = [
     {
