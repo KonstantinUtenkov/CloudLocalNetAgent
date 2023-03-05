@@ -1,7 +1,7 @@
 #!/bin/bash
 
 apt -y update
-apt -y install python3 python3-dev python3-pip
+apt -y install python3 python3-dev python3-pip syslog-ng
 
 mkdir -p /mnt/host
 

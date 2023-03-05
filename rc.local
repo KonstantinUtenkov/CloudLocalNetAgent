@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo 1 > /tmp/rc.local
+
+cd /opt/CloudLocalNetAgent
+/opt/CloudLocalNetAgent/dev_run.sh 2>&1 /opt/agentlog.txt
+
+exit 0
