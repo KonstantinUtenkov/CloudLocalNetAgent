@@ -7,13 +7,20 @@ import uuid
 import requests
 import json
 import re
+import time
 
-import logging
 import traceback
 import subprocess
 import os
 import platform
 import threading
+
+
+import logging
+FORMAT = "%(levelname)s:%(message)s"
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+log = logging.getLogger("app")
+
 
 import time
 
@@ -110,31 +117,43 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
 
 # Зарегистрировать порт самого агента на прокси(делается каждый раз, когда агент рестартует и на новый ключ и на новый порт)
 # Запрашиваем адрес и порт для проксирования порта 7190. То есть порт 7190 хоста агента будет проксироваться на указанный прокси сервер на указанные адрес и порт
-AUTHORIZED_USER=""
-try:
-    q = {"key": "authorized_user"}
-    auth_users=a.getByQuery(query=q)
-    if len(auth_users) == 0:
-        #a.add({"value":str(user_id),"key":"authorized_user"})
-        AUTHORIZED_USER=""
-    else:
-        AUTHORIZED_USER=auth_users[0]["value"]
-except Exception as inst:
+while True:
     AUTHORIZED_USER=""
-    print(inst)
+    try:
+        q = {"key": "authorized_user"}
+        auth_users=a.getByQuery(query=q)
+        if len(auth_users) == 0:
+            #a.add({"value":str(user_id),"key":"authorized_user"})
+            AUTHORIZED_USER=""
+        else:
+            AUTHORIZED_USER=auth_users[0]["value"]
+    except Exception as inst:
+        AUTHORIZED_USER=""
+        print(inst)
+    
+    register_headers = {"Content-Type": "application/json"}
+    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER}
+    response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
+    print("Status Code", response.status_code)
+    print("JSON Response ", response.json())
 
-register_headers = {"Content-Type": "application/json"}
-register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER}
-response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
-print("Status Code", response.status_code)
-print("JSON Response ", response.json())
+    #if 'action_timeout' in action.keys():
+    if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json():
+        break
+    
+    time.sleep(60)
+
 
 #Запуск регистрации порта
+log.info(str(response.json()["proxy_addr"]))
+log.info(str(response.json()["proxy_ext_addr"]))
+log.info(str(response.json()["proxy_ext_port"]))
+log.info(str(AGENT_PORT))
 
-register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT))
+register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT), daemon=True)
 register_thread.start()
-
 #register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
+
 
 # Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
 
