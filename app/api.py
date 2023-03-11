@@ -15,6 +15,8 @@ import os
 import platform
 import threading
 
+import time
+
 from subprocess import Popen, PIPE
 
 from pydantic import BaseModel
@@ -25,6 +27,8 @@ class Action(BaseModel):
     action_id: Union[str, None] = None
 
 a=db.getDb("/mnt/host/db.json")
+
+AGENT_PORT="7190"
 
 #Make host_id and add to file DB or find already known
 try:
@@ -80,6 +84,59 @@ app.add_middleware(
         allow_headers=["*"]
 )
 
+
+def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port):
+#proxy_addr - Внешний адрес прокси-сервер, к которому коннектиться
+#proxy_external_addr - Адрес на прокси-сервере, НА который будет вывешиваться порт
+#proxy_external_port - Номер порта НА который будет прокситься порт
+#proxy_internal_port - Номер порта который будет проксится
+#ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
+#ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
+    print("regestry port")
+    print(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port)
+    try:
+        while True:
+            #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_port+':'+proxy_external_addr+':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', 'forward@'+proxy_addr, '-p', '22', '-i', '/root/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            full_stdout = str(stdout.decode('utf-8'))
+            full_stderr = str(stderr.decode('utf-8'))
+            print(full_stdout, full_stderr)
+            time.sleep(10)
+    except Exception as inst:
+        allowedExecution=True
+        print(inst)
+    return
+
+
+# Зарегистрировать порт самого агента на прокси(делается каждый раз, когда агент рестартует и на новый ключ и на новый порт)
+# Запрашиваем адрес и порт для проксирования порта 7190. То есть порт 7190 хоста агента будет проксироваться на указанный прокси сервер на указанные адрес и порт
+AUTHORIZED_USER=""
+try:
+    q = {"key": "authorized_user"}
+    auth_users=a.getByQuery(query=q)
+    if len(auth_users) == 0:
+        #a.add({"value":str(user_id),"key":"authorized_user"})
+        AUTHORIZED_USER=""
+    else:
+        AUTHORIZED_USER=auth_users[0]["value"]
+except Exception as inst:
+    AUTHORIZED_USER=""
+    print(inst)
+
+register_headers = {"Content-Type": "application/json"}
+register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER}
+response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
+print("Status Code", response.status_code)
+print("JSON Response ", response.json())
+
+#Запуск регистрации порта
+
+#register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT))
+#register_thread.start()
+
+register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
+
+# Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
 
 async def action_execute(action):
     print("execute action %s"%action)
