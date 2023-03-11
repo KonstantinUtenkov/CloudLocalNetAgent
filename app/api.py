@@ -97,7 +97,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
-            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_port+':'+proxy_external_addr+':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', 'forward@'+proxy_addr, '-p', '22', '-i', '/root/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_port+':'+proxy_external_addr+':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/root/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             full_stdout = str(stdout.decode('utf-8'))
             full_stderr = str(stderr.decode('utf-8'))
             print(full_stdout, full_stderr)
@@ -131,10 +131,10 @@ print("JSON Response ", response.json())
 
 #Запуск регистрации порта
 
-#register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT))
-#register_thread.start()
+register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT))
+register_thread.start()
 
-register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
+#register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
 
 # Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
 
