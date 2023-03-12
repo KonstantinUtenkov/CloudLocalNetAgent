@@ -235,7 +235,7 @@ async def action_execute(action):
 async def read_root() -> dict:
     return {"message": "Welcome to VM list"}
 
-@app.get("/ping", tags=["ping"])
+@app.get("/agent/ping", tags=["ping"])
 async def ping_root(authorization: Union[str, None] = Header(default=None)):
     #print("Authorization: %s"%authorization)
     #headers = {"Authorization": authorization}
