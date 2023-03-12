@@ -74,6 +74,14 @@ vms = [
     }
 ]
 
+
+stdout, stderr = Popen(['rm', '/root/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['rm', '/root/.ssh/forward.id_rsa.pub'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['ssh-keygen', '-f', '/root/.ssh/forward.id_rsa', '-N', '""'], stdout=PIPE, stderr=PIPE).communicate()
+#full_stdout += str(stdout.decode('utf-8'))
+#full_stderr += str(stderr.decode('utf-8'))
+
+
 f = open("/root/.ssh/forward.id_rsa.pub", "r")
 PUBLIC_KEY_HOST=f.read()
 f.close()
