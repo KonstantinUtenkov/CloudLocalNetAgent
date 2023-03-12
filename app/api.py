@@ -111,7 +111,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
     print("regestry port")
-    print(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port)
+    log.info("%s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
