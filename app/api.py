@@ -260,7 +260,7 @@ async def ping_root(authorization: Union[str, None] = Header(default=None)):
 
 
 
-@app.get("/bind", tags=["bind"])
+@app.get("/agent/bind", tags=["bind"])
 async def bind_host(authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
     headers = {"Authorization": authorization}
@@ -286,7 +286,7 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
         return {"Detail":"Unauthorized"}
     return {"Detail":"Unauthorized"}
 
-@app.get("/unbind", tags=["bind"])
+@app.get("/agent/unbind", tags=["bind"])
 async def unbind_host(authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
     headers = {"Authorization": authorization}
@@ -321,7 +321,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
     return {"Detail":"Unauthorized"}
 
 
-@app.post("/action/", tags=["action"])
+@app.post("/agent/action/", tags=["action"])
 #async def start_action(authorization: Union[str, None] = Header(default=None), action: Action):
 async def start_action(action: Action, authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
@@ -362,7 +362,7 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
         return {"Detail":"Execute action denied"}
         
 
-@app.get("/cpuinfo", tags=["cpuinfo"])
+@app.get("/agent/cpuinfo", tags=["cpuinfo"])
 async def cpu_info():
     return {"cpuinfo": cpuinfo.get_cpu_info()}
 
