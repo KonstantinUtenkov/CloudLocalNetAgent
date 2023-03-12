@@ -74,6 +74,9 @@ vms = [
     }
 ]
 
+f = open("/root/.ssh/forward.id_rsa.pub", "r")
+PUBLIC_KEY_HOST=f.read()
+f.close()
 
 app = FastAPI()
 
@@ -132,10 +135,11 @@ while True:
         print(inst)
     
     register_headers = {"Content-Type": "application/json"}
-    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER}
+    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST}
     response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
+
 
     #if 'action_timeout' in action.keys():
     if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json():
