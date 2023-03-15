@@ -36,21 +36,47 @@ class Action(BaseModel):
 a=db.getDb("/mnt/host/db.json")
 
 AGENT_PORT="7190"
+HOST_UUID=""
+#BACK="http://192.168.1.55:8000"
+#BACK="http://dev.cloudlocalnet.com:8000"
+BACK="https://dev.cloudlocalnet.com"
+
+
+# Get UUID from server
+
+def get_uuid():
+    headers = {"Content-Type": "application/json"}
+    data={}
+    response = requests.post("%s/back/uuid-query"%BACK, headers=headers, json=data)
+    print("Status Code", response.status_code)
+    print("JSON Response ", response.json())
+    return response.json()["host_id"]
+
+
 
 #Make host_id and add to file DB or find already known
-try:
-    q = {"key": "host_id"}
-    host_uuid=a.getByQuery(query=q)
-    #print(host_uuid)
-    if len(host_uuid) == 0:
-        HOST_UUID=str(uuid.uuid4())
+while True:
+    try:
+        q = {"key": "host_id"}
+        host_uuid=a.getByQuery(query=q)
+        #print(host_uuid)
+        if len(host_uuid) == 0:
+            #HOST_UUID=str(uuid.uuid4())
+            # Тут вставить запрос UUID с бэка
+            HOST_UUID=get_uuid()
+            a.add({"value":HOST_UUID,"key":"host_id"})
+        else:
+            HOST_UUID=host_uuid[0]["value"]
+    except Exception as inst:
+        print(inst)
+        #HOST_UUID=str(uuid.uuid4())
+        HOST_UUID=get_uuid()
+        # Тут вставить запрос UUID с бэка
         a.add({"value":HOST_UUID,"key":"host_id"})
-    else:
-        HOST_UUID=host_uuid[0]["value"]
-except Exception as inst:
-    print(inst)
-    HOST_UUID=str(uuid.uuid4())
-    a.add({"value":HOST_UUID,"key":"host_id"})
+    if HOST_UUID != "":
+        break
+    time.sleep(30)
+
 
 print (HOST_UUID)
 
@@ -59,9 +85,6 @@ meminfo = dict((i.split()[0].rstrip(':'),int(i.split()[1])) for i in open('/proc
 mem_kib = meminfo['MemTotal']
 HOST_MEM = round(mem_kib/1024/1024,1)
 
-#BACK="http://192.168.1.55:8000"
-#BACK="http://dev.cloudlocalnet.com:8000"
-BACK="https://dev.cloudlocalnet.com"
 
 vms = [
     {
