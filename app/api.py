@@ -29,8 +29,6 @@ from subprocess import Popen, PIPE
 from pydantic import BaseModel
 
 class Action(BaseModel):
-    host_id: Union[str, None] = None
-    ip_addr: Union[str, None] = None
     action_id: Union[str, None] = None
 
 a=db.getDb("/mnt/host/db.json")
@@ -348,33 +346,46 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
 #async def start_action(authorization: Union[str, None] = Header(default=None), action: Action):
 async def start_action(action: Action, authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
+    #headers = {"Content-Type": "application/json", "Authorization": authorization}
+    #data ={}
+    #response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
+    #print("Status Code", response.status_code)
+    #print("JSON Response ", response.json())
+
+    # try:
+    #     user_id = response.json()["id"]
+    #     print(user_id)
+    # except Exception as inst:
+    #     print("Except %s (Unuthorized)"%inst)
+    #     user_id=""
+    # try:
+    #     q = {"key": "authorized_user"}
+    #     auth_users=a.getByQuery(query=q)
+    #     if len(auth_users) == 0:
+    #         allowedExecution=True
+    #     else:
+    #         if auth_users[0]["value"] == user_id :
+    #             allowedExecution=True
+    #         else:
+    #             allowedExecution=False
+    # except Exception as inst:
+    #     allowedExecution=True
+    #     print(inst)
+
+
+    user_id = response.json()["id"]
+
     headers = {"Content-Type": "application/json", "Authorization": authorization}
-    data ={}
-    response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
+    data ={"host_id":HOST_UUID}
+    response = requests.get("%s/check-permissions"%BACK, headers=headers, json=data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
 
-    try:
-        user_id = response.json()["id"]
-        print(user_id)
-    except Exception as inst:
-        print("Except %s (Unuthorized)"%inst)
-        user_id=""
-    try:
-        q = {"key": "authorized_user"}
-        auth_users=a.getByQuery(query=q)
-        if len(auth_users) == 0:
-            allowedExecution=True
-        else:
-            if auth_users[0]["value"] == user_id :
-                allowedExecution=True
-            else:
-                allowedExecution=False
-    except Exception as inst:
-        allowedExecution=True
-        print(inst)
+    allowedExecution = response.json()["allowedExecution"]
+
+
     if allowedExecution==True:
-        data={"host_id":action.host_id, "ip_addr": action.ip_addr, "action_id": action.action_id}
+        data={"action_id": action.action_id}
         print("DATA: %s"%data)
         response_action = requests.post("%s/action"%BACK, headers=headers, json=data)
         print("Status Code", response_action.status_code)
