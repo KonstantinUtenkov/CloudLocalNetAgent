@@ -1,0 +1,7 @@
+#!/bin/bash
+
+new_hostname=$(ifconfig -a | grep ether | gawk '{print $2}'| tr -d ":")
+hostnamectl set-hostname "$new_hostname"
+sed -i "2 s/^.*$/127.0.1.1       $new_hostname/g" /etc/hosts
+
+echo $new_hostname
