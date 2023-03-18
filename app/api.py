@@ -342,7 +342,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
     return {"Detail":"Unauthorized"}
 
 
-@app.post("/agent/action/", tags=["action"])
+@app.post("/agent/action", tags=["action"])
 #async def start_action(authorization: Union[str, None] = Header(default=None), action: Action):
 async def start_action(action: Action, authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
@@ -373,20 +373,22 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
     #     print(inst)
 
 
-    user_id = response.json()["id"]
+    #user_id = response.json()["id"]
 
     headers = {"Content-Type": "application/json", "Authorization": authorization}
     data ={"host_id":HOST_UUID}
-    response = requests.get("%s/check-permissions"%BACK, headers=headers, json=data)
+    response = requests.post("%s/back/check-permissions"%BACK, headers=headers, json=data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
 
     allowedExecution = response.json()["allowedExecution"]
 
+    
 
-    if allowedExecution==True:
+    if allowedExecution=="True":
+        print(action.action_id)
         data={"action_id": action.action_id}
-        print("DATA: %s"%data)
+        #print("DATA: %s"%data)
         response_action = requests.post("%s/action"%BACK, headers=headers, json=data)
         print("Status Code", response_action.status_code)
         print("JSON Response ", response_action.json())
