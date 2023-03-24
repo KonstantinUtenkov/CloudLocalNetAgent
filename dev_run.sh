@@ -3,7 +3,7 @@
 apt -y update
 apt -y install python3 python3-dev python3-pip syslog-ng
 
-mkdir -p /mnt/host
+#mkdir -p //host
 
 pip install -r requirements.txt
 
