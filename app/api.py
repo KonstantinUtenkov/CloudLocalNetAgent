@@ -96,14 +96,14 @@ vms = [
 ]
 
 
-stdout, stderr = Popen(['rm', '/root/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
-stdout, stderr = Popen(['rm', '/root/.ssh/forward.id_rsa.pub'], stdout=PIPE, stderr=PIPE).communicate()
-stdout, stderr = Popen(['ssh-keygen', '-f', '/root/.ssh/forward.id_rsa', '-N', ''], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['rm', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['rm', '/home/for_agent/.ssh/forward.id_rsa.pub'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['ssh-keygen', '-f', '/home/for_agent/.ssh/forward.id_rsa', '-N', ''], stdout=PIPE, stderr=PIPE).communicate()
 #full_stdout += str(stdout.decode('utf-8'))
 #full_stderr += str(stderr.decode('utf-8'))
 
 
-f = open("/root/.ssh/forward.id_rsa.pub", "r")
+f = open("/home/for_agent/.ssh/forward.id_rsa.pub", "r")
 PUBLIC_KEY_HOST=f.read()
 f.close()
 
@@ -136,7 +136,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
-            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':0.0.0.0:'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/root/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':0.0.0.0:'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
             time.sleep(10)
