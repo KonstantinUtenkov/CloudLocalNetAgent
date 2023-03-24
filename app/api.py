@@ -80,6 +80,9 @@ while True:
 
 print (HOST_UUID)
 
+#print ("!!!!!!!!!!!!!!!!!!!!!!!!!HOSTNAME")
+HOSTNAME=os.uname()[1]
+
 HOST_CORES = cpuinfo.get_cpu_info()["count"]
 meminfo = dict((i.split()[0].rstrip(':'),int(i.split()[1])) for i in open('/proc/meminfo').readlines())
 mem_kib = meminfo['MemTotal']
@@ -165,7 +168,7 @@ while True:
         print(inst)
     
     register_headers = {"Content-Type": "application/json"}
-    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST}
+    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME}
     response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
