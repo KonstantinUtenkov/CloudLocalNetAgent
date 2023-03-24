@@ -31,7 +31,7 @@ from pydantic import BaseModel
 class Action(BaseModel):
     action_id: Union[str, None] = None
 
-a=db.getDb("/mnt/host/db.json")
+a=db.getDb("/home/for_agent/db.json")
 
 AGENT_PORT="7190"
 HOST_UUID=""
@@ -213,25 +213,25 @@ async def action_execute(action):
     #Clone action repository(Auth type: None, http_pass, ssh_key)
     print("Clear directory for action")
     #stdout, stderr = Popen(['rm', '-r', '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
-    stdout, stderr = Popen(['rm', '-r', '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate()
+    stdout, stderr = Popen(['rm', '-r', '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate()
     #full_stdout += str(stdout.decode('utf-8').splitlines())
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
     print("clone action from source %s"%action["source"])
     #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
-    stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+    stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
     print("Set branch action from source %s"%action["branch"])
     #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
-    stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/mnt/action/'+ str(action["id"]), stderr=PIPE).communicate()
+    stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
     print("execute action %s"%action)
-    stdout, stderr = Popen(['/mnt/action/' + str(action["id"]) + "/"+ str(action["source_path"]) + str(action["source_run_file"])], stdout=PIPE, stderr=PIPE).communicate(timeout=action_timeout)
+    stdout, stderr = Popen(['/home/for_agent/action/' + str(action["id"]) + "/"+ str(action["source_path"]) + str(action["source_run_file"])], stdout=PIPE, stderr=PIPE).communicate(timeout=action_timeout)
     #print(str(stdout.decode('utf-8')))
     #print(str(stderr.decode('utf-8')))
 
