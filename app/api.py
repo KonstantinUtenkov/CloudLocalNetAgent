@@ -31,6 +31,8 @@ from pydantic import BaseModel
 class Action(BaseModel):
     action_id: Union[str, None] = None
 
+stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent/.ssh'], stdout=PIPE, stderr=PIPE).communicate()
 a=db.getDb("/home/for_agent/db.json")
 
 AGENT_PORT="7190"
