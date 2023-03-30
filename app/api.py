@@ -28,8 +28,13 @@ from subprocess import Popen, PIPE
 
 from pydantic import BaseModel
 
+class EnvVar(BaseModel):
+    name: str
+    value: str
+
 class Action(BaseModel):
     action_id: Union[str, None] = None
+    environment_variables: list[EnvVar] | None = None
 
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent/.ssh'], stdout=PIPE, stderr=PIPE).communicate()
@@ -64,7 +69,7 @@ while True:
             #HOST_UUID=str(uuid.uuid4())
             # Тут вставить запрос UUID с бэка
             HOST_UUID=get_uuid()
-            a.add({"value":HOST_UUID,"key":"host_id"})
+            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":""})
         else:
             HOST_UUID=host_uuid[0]["value"]
     except Exception as inst:
@@ -72,7 +77,7 @@ while True:
         #HOST_UUID=str(uuid.uuid4())
         HOST_UUID=get_uuid()
         # Тут вставить запрос UUID с бэка
-        a.add({"value":HOST_UUID,"key":"host_id"})
+        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":""})
     if HOST_UUID != "":
         break
     time.sleep(30)
@@ -150,6 +155,20 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
         print(inst)
     return
 
+#Все переменные окружения из базы добавляем в среду
+log.info(str("Load envs on start"))
+try:
+    q_envs = {"key": "environment_variable"}
+    envs_on_start=a.getByQuery(query=q_envs)
+    for env_for_export_on_start in envs_on_start:
+        log.info(str(env_for_export_on_start))
+        os.environ[env_for_export_on_start["name"]] = env_for_export_on_start["value"]
+except Exception as inst:
+    log.info(str("Exception in load envs on start"))
+    log.info(str(inst))
+    
+
+
 
 # Зарегистрировать порт самого агента на прокси(делается каждый раз, когда агент рестартует и на новый ключ и на новый порт)
 # Запрашиваем адрес и порт для проксирования порта 7190. То есть порт 7190 хоста агента будет проксироваться на указанный прокси сервер на указанные адрес и порт
@@ -159,7 +178,7 @@ while True:
         q = {"key": "authorized_user"}
         auth_users=a.getByQuery(query=q)
         if len(auth_users) == 0:
-            #a.add({"value":str(user_id),"key":"authorized_user"})
+            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
             AUTHORIZED_USER=""
         else:
             AUTHORIZED_USER=auth_users[0]["value"]
@@ -190,6 +209,38 @@ log.info(str(AGENT_PORT))
 register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT), daemon=True)
 register_thread.start()
 #register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
+
+
+
+#Добавление переменных окружения в базу и в окружение
+async def add_environment_variables(envs):
+    print("Run add_environment_variables")
+    #print(envs)
+    for env_for_export in envs:
+        print("Export %s %s"%(env_for_export.name, env_for_export.value) )
+        #HOST_UUID=host_uuid[0]["value"]
+        #record_id=a.getByQuery(query=q)[0]["id"]
+        #is_deleted = a.deleteById(pk=record_id)
+
+        try:
+            q = {"key": "environment_variable", "name":env_for_export.name}
+            env_value=a.getByQuery(query=q)
+            #print("Success query")
+            if len(env_value) == 0:
+                #HOST_UUID=str(uuid.uuid4())
+                # Тут вставить запрос UUID с бэка
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"enviroment"})
+                os.environ[env_for_export.name] = env_for_export.value
+            else:
+                record_id=env_value[0]["id"]
+                is_deleted = a.deleteById(pk=record_id)
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"enviroment"})
+                os.environ[env_for_export.name] = env_for_export.value
+        except Exception as inst:
+            print("Exception")
+            print(inst)
+            os.environ[env_for_export.name] = env_for_export.value
+
 
 
 # Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
@@ -301,7 +352,7 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             q = {"key": "authorized_user"}
             auth_users=a.getByQuery(query=q)
             if len(auth_users) == 0:
-                a.add({"value":str(user_id),"key":"authorized_user"})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
                 return {"Detail": "Success binded"}
             else:
                 return {"Detail":"Already binded"}
@@ -327,7 +378,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
             q = {"key": "authorized_user"}
             auth_users=a.getByQuery(query=q)
             if len(auth_users) == 0:
-                #a.add({"value":str(user_id),"key":"authorized_user"})
+                #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"")
                 return {"Detail": "Already Unbinded"}
             else:
                 if auth_users[0]["value"] == user_id :
@@ -388,9 +439,14 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
 
     allowedExecution = response.json()["allowedExecution"]
 
-    
+    #Variables for export to Enviroment
+    #for env_for_export in action.environment_variables:
+    #    print("%s %s"%(env_for_export.name, env_for_export.value) )
+
 
     if allowedExecution=="True":
+        print(action.environment_variables)
+        await add_environment_variables(action.environment_variables)
         print(action.action_id)
         data={"action_id": action.action_id}
         #print("DATA: %s"%data)
