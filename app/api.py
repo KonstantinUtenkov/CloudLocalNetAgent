@@ -340,11 +340,18 @@ async def ping_root(authorization: Union[str, None] = Header(default=None)):
 @app.get("/agent/bind", tags=["bind"])
 async def bind_host(authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
-    headers = {"Authorization": authorization}
-    data ={}
-    response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
+    #headers = {"Authorization": authorization}
+    #data ={}
+    #response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
+    #print("Status Code", response.status_code)
+    #print("JSON Response ", response.json())
+
+    headers = {"Content-Type": "application/json", "Authorization": authorization}
+    data ={"host_id":HOST_UUID}
+    response = requests.post("%s/back/host-bind"%BACK, headers=headers, json=data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
+
     try:
         user_id = response.json()["id"]
         print(user_id)
@@ -353,49 +360,78 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             auth_users=a.getByQuery(query=q)
             if len(auth_users) == 0:
                 a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
-                return {"Detail": "Success binded"}
+                #return {"Detail": "Success binded"}
+                return {"message": "OK"}
             else:
-                return {"Detail":"Already binded"}
+                record_id=a.getByQuery(query=q)[0]["id"]
+                is_deleted = a.deleteById(pk=record_id)
+                print(is_deleted)
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
+                return {"message":"OK","Detail":"Already binded(rebind for current) / " + str(response.json()["message"])}
         except Exception as inst:
             print(inst)
     except:
         print("Detail:Unauthorized")
-        return {"Detail":"Unauthorized"}
-    return {"Detail":"Unauthorized"}
+        return {"message":"Unauthorized"}
+    return {"message":"Unauthorized"}
 
 @app.get("/agent/unbind", tags=["bind"])
 async def unbind_host(authorization: Union[str, None] = Header(default=None)):
     print("Authorization: %s"%authorization)
-    headers = {"Authorization": authorization}
-    data ={}
-    response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
+    #headers = {"Authorization": authorization}
+    #data ={}
+    #response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
+    #print("Status Code", response.status_code)
+    #print("JSON Response ", response.json())
+
+    headers = {"Content-Type": "application/json", "Authorization": authorization}
+    data ={"host_id":HOST_UUID}
+    response = requests.post("%s/back/host-unbind"%BACK, headers=headers, json=data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
     try:
-        user_id = response.json()["id"]
-        print(user_id)
-        try:
-            q = {"key": "authorized_user"}
-            auth_users=a.getByQuery(query=q)
-            if len(auth_users) == 0:
-                #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"")
-                return {"Detail": "Already Unbinded"}
-            else:
-                if auth_users[0]["value"] == user_id :
-                    print(auth_users)
+        if response.json()["message"] == "OK":
+            try:
+                q = {"key": "authorized_user"}
+                auth_users=a.getByQuery(query=q)
+                if len(auth_users) == 0:
+                    return {"message": "OK", "Detail":"In host BD missing"}
+                else:
                     record_id=a.getByQuery(query=q)[0]["id"]
                     is_deleted = a.deleteById(pk=record_id)
                     print(is_deleted)
-                    return {"Detail":"Success Unbinded"}
-                else:
-                    print("User does not match")
-                    return {"Detail":"User dos not match"}
-        except Exception as inst:
-            print(inst)
+                    return {"message":"OK"}
+            except Exception as inst:
+                print(inst)    
+        else:
+            return {"message":str(response.json()["message"])}
+            
+        # 
+        # user_id = response.json()["id"]
+        # print(user_id)
+        # try:
+        #     q = {"key": "authorized_user"}
+        #     auth_users=a.getByQuery(query=q)
+        #     if len(auth_users) == 0:
+        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"")
+        #         return {"message": "Already Unbinded"}
+        #     else:
+        #         if auth_users[0]["value"] == user_id :
+        #             print(auth_users)
+        #             record_id=a.getByQuery(query=q)[0]["id"]
+        #             is_deleted = a.deleteById(pk=record_id)
+        #             print(is_deleted)
+        #             return {"message":"OK"}
+        #         else:
+        #             print("User does not match")
+        #             return {"message":"User does not match"}
+        # except Exception as inst:
+        #     print(inst)
+
     except:
         print("Detail:Unauthorized")
-        return {"Detail":"Unauthorized"}
-    return {"Detail":"Unauthorized"}
+        return {"message":"Unauthorized"}
+    return {"message":"Unauthorized"}
 
 
 @app.post("/agent/action", tags=["action"])
