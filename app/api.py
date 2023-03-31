@@ -69,7 +69,7 @@ while True:
             #HOST_UUID=str(uuid.uuid4())
             # Тут вставить запрос UUID с бэка
             HOST_UUID=get_uuid()
-            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":""})
+            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":""})
         else:
             HOST_UUID=host_uuid[0]["value"]
     except Exception as inst:
@@ -77,7 +77,7 @@ while True:
         #HOST_UUID=str(uuid.uuid4())
         HOST_UUID=get_uuid()
         # Тут вставить запрос UUID с бэка
-        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":""})
+        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":""})
     if HOST_UUID != "":
         break
     time.sleep(30)
@@ -178,7 +178,7 @@ while True:
         q = {"key": "authorized_user"}
         auth_users=a.getByQuery(query=q)
         if len(auth_users) == 0:
-            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
+            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":""})
             AUTHORIZED_USER=""
         else:
             AUTHORIZED_USER=auth_users[0]["value"]
@@ -229,12 +229,12 @@ async def add_environment_variables(envs):
             if len(env_value) == 0:
                 #HOST_UUID=str(uuid.uuid4())
                 # Тут вставить запрос UUID с бэка
-                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"enviroment"})
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":""})
                 os.environ[env_for_export.name] = env_for_export.value
             else:
                 record_id=env_value[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
-                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"enviroment"})
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":""})
                 os.environ[env_for_export.name] = env_for_export.value
         except Exception as inst:
             print("Exception")
@@ -359,14 +359,14 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             q = {"key": "authorized_user"}
             auth_users=a.getByQuery(query=q)
             if len(auth_users) == 0:
-                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":""})
                 #return {"Detail": "Success binded"}
                 return {"message": "OK"}
             else:
                 record_id=a.getByQuery(query=q)[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
                 print(is_deleted)
-                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":""})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":""})
                 return {"message":"OK","Detail":"Already binded(rebind for current) / " + str(response.json()["message"])}
         except Exception as inst:
             print(inst)
@@ -413,7 +413,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
         #     q = {"key": "authorized_user"}
         #     auth_users=a.getByQuery(query=q)
         #     if len(auth_users) == 0:
-        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"")
+        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"","type":"")
         #         return {"message": "Already Unbinded"}
         #     else:
         #         if auth_users[0]["value"] == user_id :
