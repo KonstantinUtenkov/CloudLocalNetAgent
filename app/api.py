@@ -70,7 +70,7 @@ while True:
             #HOST_UUID=str(uuid.uuid4())
             # Тут вставить запрос UUID с бэка
             HOST_UUID=get_uuid()
-            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":""})
+            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":""})
         else:
             HOST_UUID=host_uuid[0]["value"]
     except Exception as inst:
@@ -78,7 +78,7 @@ while True:
         #HOST_UUID=str(uuid.uuid4())
         HOST_UUID=get_uuid()
         # Тут вставить запрос UUID с бэка
-        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":""})
+        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":""})
     if HOST_UUID != "":
         break
     time.sleep(30)
@@ -183,7 +183,7 @@ while True:
         q = {"key": "authorized_user"}
         auth_users=a.getByQuery(query=q)
         if len(auth_users) == 0:
-            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":""})
+            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
             AUTHORIZED_USER=""
         else:
             AUTHORIZED_USER=auth_users[0]["value"]
@@ -234,12 +234,12 @@ async def add_environment_variables(envs):
             if len(env_value) == 0:
                 #HOST_UUID=str(uuid.uuid4())
                 # Тут вставить запрос UUID с бэка
-                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":""})
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":""})
                 os.environ[env_for_export.name] = env_for_export.value
             else:
                 record_id=env_value[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
-                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":""})
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":""})
                 os.environ[env_for_export.name] = env_for_export.value
         except Exception as inst:
             print("Exception")
@@ -363,14 +363,14 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             q = {"key": "authorized_user"}
             auth_users=a.getByQuery(query=q)
             if len(auth_users) == 0:
-                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":""})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
                 #return {"Detail": "Success binded"}
                 return {"message": "OK"}
             else:
                 record_id=a.getByQuery(query=q)[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
                 print(is_deleted)
-                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":""})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
                 return {"message":"OK","Detail":"Already binded(rebind for current) / " + str(response.json()["message"])}
         except Exception as inst:
             print(inst)
@@ -417,7 +417,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
         #     q = {"key": "authorized_user"}
         #     auth_users=a.getByQuery(query=q)
         #     if len(auth_users) == 0:
-        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"","type":"")
+        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"","type":"","vm_id":"")
         #         return {"message": "Already Unbinded"}
         #     else:
         #         if auth_users[0]["value"] == user_id :
@@ -484,14 +484,38 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
 
 
     if allowedExecution=="True":
-        print(action.environment_variables)
-        await add_environment_variables(action.environment_variables)
+        if (action.environment_variables):
+            print(action.environment_variables)
+            await add_environment_variables(action.environment_variables)
         print(action.action_id)
         data={"action_id": action.action_id}
         #print("DATA: %s"%data)
         response_action = requests.post("%s/action"%BACK, headers=headers, json=data)
         print("Status Code", response_action.status_code)
         print("JSON Response ", response_action.json())
+        print(response_action.json().keys())
+        # Add ports 
+        if "ports" in response_action.json().keys():
+            if response_action.json()["ports"] != None:
+                for port_add in response_action.json()["ports"]:
+                    print(port_add)
+                    #Проверка наличия порта в локальной базе и добавление если его нет:
+                    try:
+                        q = {"key": "port", "value": port_add["value"], "vm_id": port_add["vm_id"]}
+                        port_db=a.getByQuery(query=q)
+                        if len(port_db) == 0:
+                            #Добавляем порт в локальную базу так как его нет
+                            a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),"type":str(port_add["type"]),"vm_id":str(port_add["vm_id"])})
+                        else:
+                            #Если порт есть, удаляем его и его данные и добавляем по новой, для обновления записи. Почему не апдейт? Да хрен знает.
+                            record_id=a.getByQuery(query=q)[0]["id"]
+                            is_deleted = a.deleteById(pk=record_id)
+                            print(is_deleted)
+                            a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),"type":str(port_add["type"]),"vm_id":str(port_add["vm_id"])})
+                    except Exception as inst:
+                        print(inst)    
+                    
+        print("Start Action")
         full_stdout, full_stderr = await action_execute(response_action.json())
         return {"Detail":"Execute action", "full_stdout": full_stdout, "full_stderr": full_stderr}
     else:
