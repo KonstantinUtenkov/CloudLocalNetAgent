@@ -192,7 +192,7 @@ while True:
         print(inst)
     
     register_headers = {"Content-Type": "application/json"}
-    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME}
+    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT}
     response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
@@ -249,6 +249,8 @@ async def add_environment_variables(envs):
 
 
 # Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
+
+
 
 async def action_execute(action):
     print("execute action %s"%action)
@@ -499,7 +501,7 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
             if response_action.json()["ports"] != None:
                 for port_add in response_action.json()["ports"]:
                     print(port_add)
-                    #Проверка наличия порта в локальной базе и добавление если его нет:
+                    # Проверка наличия порта в локальной базе и добавление если его нет, а если есть обновление данных(удаление и добавление по новой):
                     try:
                         q = {"key": "port", "value": port_add["value"], "vm_id": port_add["vm_id"]}
                         port_db=a.getByQuery(query=q)
@@ -514,6 +516,33 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                             a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),"type":str(port_add["type"]),"vm_id":str(port_add["vm_id"])})
                     except Exception as inst:
                         print(inst)    
+                # Добавление всех портов в данные по хосту и отправка нового набора
+                # Запрос всех портов в локальной БД
+                q = {"key": "port"}
+                port_db=a.getByQuery(query=q)
+                port_on_sent=[]
+
+                print(port_db)
+                for port_one in port_db:
+                    tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"] }
+                    port_on_sent.append(tmp_port)
+
+                q = {"key": "authorized_user"}
+                auth_users=a.getByQuery(query=q)
+                if len(auth_users) == 0:
+                    auth_user_on_sent = ""
+                else:
+                    auth_user_on_sent = auth_users[0]["value"]
+                print(auth_users)
+                headers = {"Content-Type": "application/json", "Authorization": authorization}
+                data ={"host_id":HOST_UUID, "authorized_user":auth_user_on_sent,"ports":port_on_sent}
+                response = requests.post("%s/back/ports-update"%BACK, headers=headers, json=data)
+                print("Status Code", response.status_code)
+                print("JSON Response ", response.json())
+                
+
+
+
                     
         print("Start Action")
         full_stdout, full_stderr = await action_execute(response_action.json())
