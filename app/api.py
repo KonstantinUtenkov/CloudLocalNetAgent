@@ -153,10 +153,11 @@ except Exception as inst:
     log.info(str("Exception in load envs on start"))
     log.info(str(inst))
 
-def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port):
+def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_addr, proxy_internal_port):
 #proxy_addr - Внешний адрес прокси-сервер, к которому коннектиться
 #proxy_external_addr - Адрес на прокси-сервере, НА который будет вывешиваться порт
 #proxy_external_port - Номер порта НА который будет прокситься порт
+#proxy_internal_addr - Адрес который будет проксится
 #proxy_internal_port - Номер порта который будет проксится
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
@@ -165,7 +166,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
-            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':0.0.0.0:'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
             time.sleep(60)
@@ -210,7 +211,7 @@ log.info(str(response.json()["proxy_ext_addr"]))
 log.info(str(response.json()["proxy_ext_port"]))
 log.info(str(AGENT_PORT))
 
-register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT), daemon=True)
+register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],"0.0.0.0",AGENT_PORT), daemon=True)
 register_thread.start()
 #register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
 
@@ -266,7 +267,6 @@ async def action_execute(action):
         source_timeout=int(action["source_timeout"])
     else:
         source_timeout=int(255)
-
 
     print(source_timeout, action_timeout)
 
