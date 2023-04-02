@@ -36,6 +36,7 @@ class Action(BaseModel):
     action_id: Union[str, None] = None
     environment_variables: list[EnvVar] | None = None
 
+#Создание каталогов под ключи
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent/.ssh'], stdout=PIPE, stderr=PIPE).communicate()
 a=db.getDb("/home/for_agent/db.json")
@@ -105,16 +106,23 @@ vms = [
     }
 ]
 
-
+#Создание ключей
 stdout, stderr = Popen(['rm', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
 stdout, stderr = Popen(['rm', '/home/for_agent/.ssh/forward.id_rsa.pub'], stdout=PIPE, stderr=PIPE).communicate()
 stdout, stderr = Popen(['ssh-keygen', '-f', '/home/for_agent/.ssh/forward.id_rsa', '-N', ''], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['rm', '/home/for_agent/.ssh/forward_port.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['rm', '/home/for_agent/.ssh/forward_port.id_rsa.pub'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['ssh-keygen', '-f', '/home/for_agent/.ssh/forward_port.id_rsa', '-N', ''], stdout=PIPE, stderr=PIPE).communicate()
 #full_stdout += str(stdout.decode('utf-8'))
 #full_stderr += str(stderr.decode('utf-8'))
 
 
 f = open("/home/for_agent/.ssh/forward.id_rsa.pub", "r")
 PUBLIC_KEY_HOST=f.read()
+f.close()
+
+f = open("/home/for_agent/.ssh/forward_port.id_rsa.pub", "r")
+PUBLIC_KEY_HOST_PORT=f.read()
 f.close()
 
 app = FastAPI()
@@ -133,6 +141,17 @@ app.add_middleware(
         allow_headers=["*"]
 )
 
+#Все переменные окружения из базы добавляем в среду
+log.info(str("Load envs on start"))
+try:
+    q_envs = {"key": "environment_variable"}
+    envs_on_start=a.getByQuery(query=q_envs)
+    for env_for_export_on_start in envs_on_start:
+        log.info(str(env_for_export_on_start))
+        os.environ[env_for_export_on_start["name"]] = env_for_export_on_start["value"]
+except Exception as inst:
+    log.info(str("Exception in load envs on start"))
+    log.info(str(inst))
 
 def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port):
 #proxy_addr - Внешний адрес прокси-сервер, к которому коннектиться
@@ -149,26 +168,11 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
             stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':0.0.0.0:'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
-            time.sleep(10)
+            time.sleep(60)
     except Exception as inst:
         allowedExecution=True
         print(inst)
     return
-
-#Все переменные окружения из базы добавляем в среду
-log.info(str("Load envs on start"))
-try:
-    q_envs = {"key": "environment_variable"}
-    envs_on_start=a.getByQuery(query=q_envs)
-    for env_for_export_on_start in envs_on_start:
-        log.info(str(env_for_export_on_start))
-        os.environ[env_for_export_on_start["name"]] = env_for_export_on_start["value"]
-except Exception as inst:
-    log.info(str("Exception in load envs on start"))
-    log.info(str(inst))
-    
-
-
 
 # Зарегистрировать порт самого агента на прокси(делается каждый раз, когда агент рестартует и на новый ключ и на новый порт)
 # Запрашиваем адрес и порт для проксирования порта 7190. То есть порт 7190 хоста агента будет проксироваться на указанный прокси сервер на указанные адрес и порт
@@ -463,10 +467,9 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
     # except Exception as inst:
     #     allowedExecution=True
     #     print(inst)
-
-
     #user_id = response.json()["id"]
 
+    # Проверка прав, что юзер может исполнять экшн на этом хосту
     headers = {"Content-Type": "application/json", "Authorization": authorization}
     data ={"host_id":HOST_UUID}
     response = requests.post("%s/back/check-permissions"%BACK, headers=headers, json=data)
