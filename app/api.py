@@ -191,8 +191,20 @@ while True:
         AUTHORIZED_USER=""
         print(inst)
     
+    try:
+        q = {"key": "port"}
+        ports=a.getByQuery(query=q)
+    except Exception as inst:
+        ports="[]"
+        print(inst)
+
+    for port_one in port_db:
+        tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"] }
+        port_on_sent.append(tmp_port)
+
+    
     register_headers = {"Content-Type": "application/json"}
-    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT}
+    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT, "ports":port_on_sent}
     response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
     print("Status Code", response.status_code)
     print("JSON Response ", response.json())
