@@ -193,7 +193,7 @@ while True:
     
     try:
         q = {"key": "port"}
-        ports=a.getByQuery(query=q)
+        port_db=a.getByQuery(query=q)
     except Exception as inst:
         ports="[]"
         print(inst)
