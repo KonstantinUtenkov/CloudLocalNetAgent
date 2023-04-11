@@ -54,8 +54,8 @@ def get_uuid():
     headers = {"Content-Type": "application/json"}
     data={}
     response = requests.post("%s/back/uuid-query"%BACK, headers=headers, json=data)
-    print("Status Code", response.status_code)
-    print("JSON Response ", response.json())
+    log.info("Status Code %s", str(response.status_code))
+    log.info("JSON Response %s", str(response.json()))
     return response.json()["host_id"]
 
 
@@ -74,7 +74,7 @@ while True:
         else:
             HOST_UUID=host_uuid[0]["value"]
     except Exception as inst:
-        print(inst)
+        log.info(inst)
         #HOST_UUID=str(uuid.uuid4())
         HOST_UUID=get_uuid()
         # Тут вставить запрос UUID с бэка
@@ -84,7 +84,7 @@ while True:
     time.sleep(30)
 
 
-print (HOST_UUID)
+log.info(HOST_UUID)
 
 #print ("!!!!!!!!!!!!!!!!!!!!!!!!!HOSTNAME")
 HOSTNAME=os.uname()[1]
@@ -161,7 +161,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
 #proxy_internal_port - Номер порта который будет проксится
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
-    print("regestry port")
+    log.info("regestry port")
     log.info("%s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
     try:
         while True:
@@ -172,7 +172,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
             time.sleep(60)
     except Exception as inst:
         allowedExecution=True
-        print(inst)
+        log.info(inst)
     return
 
 # Зарегистрировать порт самого агента на прокси(делается каждый раз, когда агент рестартует и на новый ключ и на новый порт)
@@ -189,7 +189,7 @@ while True:
             AUTHORIZED_USER=auth_users[0]["value"]
     except Exception as inst:
         AUTHORIZED_USER=""
-        print(inst)
+        log.info(inst)
     
     port_on_sent = []
     try:
@@ -197,7 +197,7 @@ while True:
         port_db=a.getByQuery(query=q)
     except Exception as inst:
         port_db=[]
-        print(inst)
+        log.info(inst)
 
     for port_one in port_db:
         tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"] }
@@ -207,9 +207,9 @@ while True:
     register_headers = {"Content-Type": "application/json"}
     register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT, "ports":port_on_sent}
     response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
-    print(response)
-    print("Status Code", response.status_code)
-    print("JSON Response ", response.json())
+    log.info(response)
+    log.info("Status Code %s", str(response.status_code))
+    log.info("JSON Response %s", str(response.json()))
 
 
     #if 'action_timeout' in action.keys():
@@ -233,10 +233,10 @@ register_thread.start()
 
 #Добавление переменных окружения в базу и в окружение
 async def add_environment_variables(envs):
-    print("Run add_environment_variables")
+    log.info("Run add_environment_variables")
     #print(envs)
     for env_for_export in envs:
-        print("Export %s %s"%(env_for_export.name, env_for_export.value) )
+        log.info("Export %s %s"%(env_for_export.name, env_for_export.value) )
         #HOST_UUID=host_uuid[0]["value"]
         #record_id=a.getByQuery(query=q)[0]["id"]
         #is_deleted = a.deleteById(pk=record_id)
@@ -256,8 +256,8 @@ async def add_environment_variables(envs):
                 a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":""})
                 os.environ[env_for_export.name] = env_for_export.value
         except Exception as inst:
-            print("Exception")
-            print(inst)
+            log.info("Exception")
+            log.info(inst)
             os.environ[env_for_export.name] = env_for_export.value
 
 
@@ -267,7 +267,7 @@ async def add_environment_variables(envs):
 
 
 async def action_execute(action):
-    print("execute action %s"%action)
+    log.info("execute action %s"%action)
 
     full_stdout = ""
     full_stderr = ""
@@ -284,29 +284,29 @@ async def action_execute(action):
     else:
         source_timeout=int(255)
 
-    print(source_timeout, action_timeout)
+    log.info(" %s %s "%(source_timeout, action_timeout))
 
     #Clone action repository(Auth type: None, http_pass, ssh_key)
-    print("Clear directory for action")
+    log.info("Clear directory for action")
     #stdout, stderr = Popen(['rm', '-r', '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
     stdout, stderr = Popen(['rm', '-r', '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate()
     #full_stdout += str(stdout.decode('utf-8').splitlines())
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
-    print("clone action from source %s"%action["source"])
+    log.info("clone action from source %s"%action["source"])
     #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
     stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
-    print("Set branch action from source %s"%action["branch"])
+    log.info("Set branch action from source %s"%action["branch"])
     #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
     stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
-    print("execute action %s"%action)
+    log.info("execute action %s"%action)
     stdout, stderr = Popen(['/home/for_agent/action/' + str(action["id"]) + "/"+ str(action["source_path"]) + str(action["source_run_file"])], stdout=PIPE, stderr=PIPE).communicate(timeout=action_timeout)
     #print(str(stdout.decode('utf-8')))
     #print(str(stderr.decode('utf-8')))
@@ -314,7 +314,7 @@ async def action_execute(action):
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
-    print(full_stdout, full_stderr)
+    log.info(" %s %s"%(full_stdout, full_stderr))
 
     #print(stdout_clear, stderr_clear, stdout_gitclone, stderr_gitclone, stdout_gitcheckout, stderr_gitcheckout, stdout_runaction, stderr_runaction)
     #full_output = stdout_clear + stderr_clear + stdout_gitclone + stderr_gitclone + stdout_gitcheckout + stderr_gitcheckout + stdout_runaction + stderr_runaction
@@ -359,7 +359,7 @@ async def ping_root(authorization: Union[str, None] = Header(default=None)):
 
 @app.get("/agent/bind", tags=["bind"])
 async def bind_host(authorization: Union[str, None] = Header(default=None)):
-    print("Authorization: %s"%authorization)
+    log.info("Authorization: %s"%authorization)
     #headers = {"Authorization": authorization}
     #data ={}
     #response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
@@ -369,12 +369,12 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
     headers = {"Content-Type": "application/json", "Authorization": authorization}
     data ={"host_id":HOST_UUID}
     response = requests.post("%s/back/host-bind"%BACK, headers=headers, json=data)
-    print("Status Code", response.status_code)
-    print("JSON Response ", response.json())
+    log.info("Status Code %s"%str(response.status_code))
+    log.info("JSON Response %s"%str(response.json()))
 
     try:
         user_id = response.json()["id"]
-        print(user_id)
+        log.info(user_id)
         try:
             q = {"key": "authorized_user"}
             auth_users=a.getByQuery(query=q)
@@ -385,19 +385,19 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             else:
                 record_id=a.getByQuery(query=q)[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
-                print(is_deleted)
+                log.info(is_deleted)
                 a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
                 return {"message":"OK","Detail":"Already binded(rebind for current) / " + str(response.json()["message"])}
         except Exception as inst:
-            print(inst)
+            log.info(inst)
     except:
-        print("Detail:Unauthorized")
+        log.info("Detail:Unauthorized")
         return {"message":"Unauthorized"}
     return {"message":"Unauthorized"}
 
 @app.get("/agent/unbind", tags=["bind"])
 async def unbind_host(authorization: Union[str, None] = Header(default=None)):
-    print("Authorization: %s"%authorization)
+    log.info("Authorization: %s"%authorization)
     #headers = {"Authorization": authorization}
     #data ={}
     #response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
@@ -407,8 +407,8 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
     headers = {"Content-Type": "application/json", "Authorization": authorization}
     data ={"host_id":HOST_UUID}
     response = requests.post("%s/back/host-unbind"%BACK, headers=headers, json=data)
-    print("Status Code", response.status_code)
-    print("JSON Response ", response.json())
+    log.info("Status Code %s"%str(response.status_code))
+    log.info("JSON Response %s"%str(response.json()))
     try:
         if response.json()["message"] == "OK":
             try:
@@ -419,10 +419,10 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
                 else:
                     record_id=a.getByQuery(query=q)[0]["id"]
                     is_deleted = a.deleteById(pk=record_id)
-                    print(is_deleted)
+                    log.info(is_deleted)
                     return {"message":"OK"}
             except Exception as inst:
-                print(inst)    
+                log.info(inst)    
         else:
             return {"message":str(response.json()["message"])}
             
@@ -449,7 +449,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
         #     print(inst)
 
     except:
-        print("Detail:Unauthorized")
+        log.info("Detail:Unauthorized")
         return {"message":"Unauthorized"}
     return {"message":"Unauthorized"}
 
@@ -457,7 +457,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
 @app.post("/agent/action", tags=["action"])
 #async def start_action(authorization: Union[str, None] = Header(default=None), action: Action):
 async def start_action(action: Action, authorization: Union[str, None] = Header(default=None)):
-    print("Authorization: %s"%authorization)
+    log.info("Authorization: %s"%authorization)
     #headers = {"Content-Type": "application/json", "Authorization": authorization}
     #data ={}
     #response = requests.get("%s/users/me"%BACK, headers=headers, json=data)
@@ -489,8 +489,8 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
     headers = {"Content-Type": "application/json", "Authorization": authorization}
     data ={"host_id":HOST_UUID}
     response = requests.post("%s/back/check-permissions"%BACK, headers=headers, json=data)
-    print("Status Code", response.status_code)
-    print("JSON Response ", response.json())
+    log.info("Status Code %s"%str(response.status_code))
+    log.info("JSON Response %s"%str(response.json()))
 
     allowedExecution = response.json()["allowedExecution"]
 
@@ -501,20 +501,20 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
 
     if allowedExecution=="True":
         if (action.environment_variables):
-            print(action.environment_variables)
+            log.info(action.environment_variables)
             await add_environment_variables(action.environment_variables)
-        print(action.action_id)
+        log.info(action.action_id)
         data={"action_id": action.action_id}
         #print("DATA: %s"%data)
         response_action = requests.post("%s/action"%BACK, headers=headers, json=data)
-        print("Status Code", response_action.status_code)
-        print("JSON Response ", response_action.json())
-        print(response_action.json().keys())
+        log.info("Status Code %s"%str(response_action.status_code))
+        log.info("JSON Response %s"%str(response_action.json()))
+        log.info(response_action.json().keys())
         # Add ports 
         if "ports" in response_action.json().keys():
             if response_action.json()["ports"] != None:
                 for port_add in response_action.json()["ports"]:
-                    print(port_add)
+                    log.info(port_add)
                     # Проверка наличия порта в локальной базе и добавление если его нет, а если есть обновление данных(удаление и добавление по новой):
                     try:
                         q = {"key": "port", "value": port_add["value"], "vm_id": port_add["vm_id"]}
@@ -526,17 +526,17 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                             #Если порт есть, удаляем его и его данные и добавляем по новой, для обновления записи. Почему не апдейт? Да хрен знает.
                             record_id=a.getByQuery(query=q)[0]["id"]
                             is_deleted = a.deleteById(pk=record_id)
-                            print(is_deleted)
+                            log.info(is_deleted)
                             a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),"type":str(port_add["type"]),"vm_id":str(port_add["vm_id"])})
                     except Exception as inst:
-                        print(inst)    
+                        log.info(inst)    
                 # Добавление всех портов в данные по хосту и отправка нового набора
                 # Запрос всех портов в локальной БД
                 q = {"key": "port"}
                 port_db=a.getByQuery(query=q)
                 port_on_sent=[]
 
-                print(port_db)
+                log.info(port_db)
                 for port_one in port_db:
                     tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"] }
                     port_on_sent.append(tmp_port)
@@ -547,18 +547,18 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                     auth_user_on_sent = ""
                 else:
                     auth_user_on_sent = auth_users[0]["value"]
-                print(auth_users)
+                log.info(auth_users)
                 headers = {"Content-Type": "application/json", "Authorization": authorization}
                 data ={"host_id":HOST_UUID, "authorized_user":auth_user_on_sent,"ports":port_on_sent}
                 response = requests.post("%s/back/ports-update"%BACK, headers=headers, json=data)
-                print("Status Code", response.status_code)
-                print("JSON Response ", response.json())
+                log.info("Status Code %s"%str(response.status_code))
+                log.ingo("JSON Response %s"%str(response.json()))
                 
 
 
 
                     
-        print("Start Action")
+        log.info("Start Action")
         full_stdout, full_stderr = await action_execute(response_action.json())
         return {"Detail":"Execute action", "full_stdout": full_stdout, "full_stderr": full_stderr}
     else:
