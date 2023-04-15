@@ -161,12 +161,32 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
 #proxy_internal_port - Номер порта который будет проксится
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
-    log.info("regestry port")
-    log.info("%s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
+    log.info("-------------regestry port       %s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
             stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            log.info(str(stdout.decode('utf-8')))
+            log.info(str(stderr.decode('utf-8')))
+            time.sleep(60)
+    except Exception as inst:
+        allowedExecution=True
+        log.info(inst)
+    return
+
+def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_addr, proxy_internal_port):
+#proxy_addr - Внешний адрес прокси-сервер, к которому коннектиться
+#proxy_external_addr - Адрес на прокси-сервере, НА который будет вывешиваться порт
+#proxy_external_port - Номер порта НА который будет прокситься порт
+#proxy_internal_addr - Адрес который будет проксится
+#proxy_internal_port - Номер порта который будет проксится
+#ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
+#ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
+    log.info("-------------regestry port ports      %s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
+    try:
+        while True:
+            #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward_port.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
             time.sleep(60)
@@ -235,7 +255,7 @@ for forward_port_next in response.json()["ports"]:
     else:
         # Тут будет запрос IP адреса той виртуалки, порт которой надо прокинуть на прокси сервер
         addr_on_agent_side = "0.0.0.0"
-    register_thread = threading.Thread(target=register_port, name="Proxyng port"+forward_port_next["name"], 
+    register_thread = threading.Thread(target=register_port_ports, name="Proxyng port"+forward_port_next["name"], 
         args=(forward_port_next["proxy_addr"], forward_port_next["proxy_ext_addr"], forward_port_next["proxy_ext_port"],"0.0.0.0",forward_port_next["value"]), daemon=True)
     register_thread.start()
     
