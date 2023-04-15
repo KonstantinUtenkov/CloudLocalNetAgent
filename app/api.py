@@ -219,7 +219,7 @@ while True:
     time.sleep(60)
 
 
-#Запуск регистрации порта
+#Запуск регистрации порта агента
 log.info(str(response.json()["proxy_addr"]))
 log.info(str(response.json()["proxy_ext_addr"]))
 log.info(str(response.json()["proxy_ext_port"]))
@@ -227,6 +227,19 @@ log.info(str(AGENT_PORT))
 
 register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],"0.0.0.0",AGENT_PORT), daemon=True)
 register_thread.start()
+
+# Запуск регитрации портов на разрешенных прокси
+for forward_port_next in response.json()["ports"]:
+    if forward_port_next["vm_id"] == "":
+        addr_on_agent_side = "0.0.0.0"
+    else:
+        # Тут будет запрос IP адреса той виртуалки, порт которой надо прокинуть на прокси сервер
+        addr_on_agent_side = "0.0.0.0"
+    register_thread = threading.Thread(target=register_port, name="Proxyng port"+forward_port_next["name"], 
+        args=(forward_port_next["proxy_addr"], forward_port_next["proxy_ext_addr"], forward_port_next["proxy_ext_port"],"0.0.0.0",forward_port_next["value"]), daemon=True)
+    register_thread.start()
+    
+
 #register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
 
 
@@ -552,12 +565,8 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                 data ={"host_id":HOST_UUID, "authorized_user":auth_user_on_sent,"ports":port_on_sent}
                 response = requests.post("%s/back/ports-update"%BACK, headers=headers, json=data)
                 log.info("Status Code %s"%str(response.status_code))
-                log.ingo("JSON Response %s"%str(response.json()))
-                
+                log.info("JSON Response %s"%str(response.json()))
 
-
-
-                    
         log.info("Start Action")
         full_stdout, full_stderr = await action_execute(response_action.json())
         return {"Detail":"Execute action", "full_stdout": full_stdout, "full_stderr": full_stderr}
