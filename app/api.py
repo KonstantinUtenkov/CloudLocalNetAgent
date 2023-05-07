@@ -2,7 +2,7 @@ from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pysondb import db
 import cpuinfo
-from typing import Union
+from typing import Union, List
 import uuid
 import requests
 import json
@@ -43,8 +43,10 @@ class proxyPorts(BaseModel):
 
 class Action(BaseModel):
     action_id: Union[str, None] = None
-    environment_variables: list[EnvVar] | None = None
-    ports: list[proxyPorts] | None = None
+    #environment_variables: list[EnvVar] | None = None
+    #ports: list[proxyPorts] | None = None
+    environment_variables: List[EnvVar] | None = None
+    ports: List[proxyPorts] | None = None
 
 #Создание каталогов под ключи
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
@@ -230,7 +232,7 @@ while True:
         log.info(inst)
 
     for port_one in port_db:
-        tmp_port = {"name":port_one["name"],"type_port":port_one["port_type"],"value":port_one["value"],"vm_id":port_one["vm_id"],"proxy":port_one["proxy"] }
+        tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"],"proxy":port_one["proxy"] }
         port_on_sent.append(tmp_port)
 
     
@@ -353,13 +355,6 @@ async def add_proxy_ports(proxy_ports, authorization):
             response = requests.post("%s/back/ports-update"%BACK, headers=headers, json=data)
             log.info("Status Code %s"%str(response.status_code))
             log.info("JSON Response %s"%str(response.json()))
-
-
-
-
-
-
-
 
 
 
