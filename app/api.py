@@ -238,6 +238,7 @@ while True:
     
     register_headers = {"Content-Type": "application/json"}
     register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT, "ports":port_on_sent}
+    log.info(register_data)
     response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
     log.info(response)
     log.info("Status Code %s", str(response.status_code))
