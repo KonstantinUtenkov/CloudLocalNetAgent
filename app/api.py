@@ -45,8 +45,10 @@ class Action(BaseModel):
     action_id: Union[str, None] = None
     #environment_variables: list[EnvVar] | None = None
     #ports: list[proxyPorts] | None = None
-    environment_variables: List[EnvVar] | None = None
-    ports: List[proxyPorts] | None = None
+    #environment_variables: List[EnvVar] | None = None
+    #ports: List[proxyPorts] | None = None
+    environment_variables: List[EnvVar]
+    ports: List[proxyPorts]
 
 #Создание каталогов под ключи
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
