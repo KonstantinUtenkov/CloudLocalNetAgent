@@ -32,9 +32,19 @@ class EnvVar(BaseModel):
     name: str
     value: str
 
+class proxyPorts(BaseModel):
+    comment: str
+    name: str
+    port_type: str
+    proxy_addr: str
+    value: str
+    vm_id: str
+    #port_type: str
+
 class Action(BaseModel):
     action_id: Union[str, None] = None
     environment_variables: list[EnvVar] | None = None
+    ports: list[proxyPorts] | None = None
 
 #Создание каталогов под ключи
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
@@ -70,7 +80,7 @@ while True:
             #HOST_UUID=str(uuid.uuid4())
             # Тут вставить запрос UUID с бэка
             HOST_UUID=get_uuid()
-            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":""})
+            a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":"", "proxy":""})
         else:
             HOST_UUID=host_uuid[0]["value"]
     except Exception as inst:
@@ -78,7 +88,7 @@ while True:
         #HOST_UUID=str(uuid.uuid4())
         HOST_UUID=get_uuid()
         # Тут вставить запрос UUID с бэка
-        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":""})
+        a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":"","proxy":""})
     if HOST_UUID != "":
         break
     time.sleep(30)
@@ -203,7 +213,7 @@ while True:
         q = {"key": "authorized_user"}
         auth_users=a.getByQuery(query=q)
         if len(auth_users) == 0:
-            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
+            #a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":"","proxy":""})
             AUTHORIZED_USER=""
         else:
             AUTHORIZED_USER=auth_users[0]["value"]
@@ -220,7 +230,7 @@ while True:
         log.info(inst)
 
     for port_one in port_db:
-        tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"] }
+        tmp_port = {"name":port_one["name"],"type_port":port_one["port_type"],"value":port_one["value"],"vm_id":port_one["vm_id"],"proxy":port_one["proxy"] }
         port_on_sent.append(tmp_port)
 
     
@@ -281,12 +291,12 @@ async def add_environment_variables(envs):
             if len(env_value) == 0:
                 #HOST_UUID=str(uuid.uuid4())
                 # Тут вставить запрос UUID с бэка
-                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":""})
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":"","proxy":""})
                 os.environ[env_for_export.name] = env_for_export.value
             else:
                 record_id=env_value[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
-                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":""})
+                a.add({"name":env_for_export.name,"value":env_for_export.value,"key":"environment_variable","chapter":"environment","type":"","vm_id":"","proxy":""})
                 os.environ[env_for_export.name] = env_for_export.value
         except Exception as inst:
             log.info("Exception")
@@ -294,10 +304,67 @@ async def add_environment_variables(envs):
             os.environ[env_for_export.name] = env_for_export.value
 
 
+async def add_proxy_ports(proxy_ports, authorization):
+    log.info("Run add_proxy_ports")
+    # Add ports 
+    if (proxy_ports):
+        #if response_action.json()["ports"] != None:
+        if proxy_ports != None:
+            #for port_add in response_action.json()["ports"]:
+            for port_add in proxy_ports:
+                log.info(port_add)
+                # Проверка наличия порта в локальной базе и добавление если его нет, а если есть обновление данных(удаление и добавление по новой):
+                try:
+                    q = {"key": "port", "value": port_add.value, "vm_id": port_add.vm_id}
+                    port_db=a.getByQuery(query=q)
+                    if len(port_db) == 0:
+                        #Добавляем порт в локальную базу так как его нет
+                        a.add({"value":str(port_add.value),"key":"port","chapter":"host","name":str(port_add.name),
+                            "type":str(port_add.port_type),"vm_id":str(port_add.vm_id), "proxy":str(port_add.proxy_addr)})
+                    else:
+                        #Если порт есть, удаляем его и его данные и добавляем по новой, для обновления записи. Почему не апдейт? Да хрен знает.
+                        record_id=a.getByQuery(query=q)[0]["id"]
+                        is_deleted = a.deleteById(pk=record_id)
+                        log.info(is_deleted)
+                        a.add({"value":str(port_add.value),"key":"port","chapter":"host","name":str(port_add.name),
+                            "type":str(port_add.port_type),"vm_id":str(port_add.vm_id), "proxy":str(port_add.proxy_addr)})
+                except Exception as inst:
+                    log.info(inst)    
+            # Добавление всех портов в данные по хосту и отправка нового набора
+            # Запрос всех портов в локальной БД
+            q = {"key": "port"}
+            port_db=a.getByQuery(query=q)
+            port_on_sent=[]
+
+            log.info(port_db)
+            for port_one in port_db:
+                tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"], "proxy":port_one["proxy"] }
+                port_on_sent.append(tmp_port)
+
+            q = {"key": "authorized_user"}
+            auth_users=a.getByQuery(query=q)
+            if len(auth_users) == 0:
+                auth_user_on_sent = ""
+            else:
+                auth_user_on_sent = auth_users[0]["value"]
+            log.info(auth_users)
+            headers = {"Content-Type": "application/json", "Authorization": authorization}
+            data ={"host_id":HOST_UUID, "authorized_user":auth_user_on_sent,"ports":port_on_sent}
+            response = requests.post("%s/back/ports-update"%BACK, headers=headers, json=data)
+            log.info("Status Code %s"%str(response.status_code))
+            log.info("JSON Response %s"%str(response.json()))
+
+
+
+
+
+
+
+
+
+
 
 # Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
-
-
 
 async def action_execute(action):
     log.info("execute action %s"%action)
@@ -412,14 +479,14 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             q = {"key": "authorized_user"}
             auth_users=a.getByQuery(query=q)
             if len(auth_users) == 0:
-                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":"","proxy":""})
                 #return {"Detail": "Success binded"}
                 return {"message": "OK"}
             else:
                 record_id=a.getByQuery(query=q)[0]["id"]
                 is_deleted = a.deleteById(pk=record_id)
                 log.info(is_deleted)
-                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":""})
+                a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":"","proxy":""})
                 return {"message":"OK","Detail":"Already binded(rebind for current) / " + str(response.json()["message"])}
         except Exception as inst:
             log.info(inst)
@@ -466,7 +533,7 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
         #     q = {"key": "authorized_user"}
         #     auth_users=a.getByQuery(query=q)
         #     if len(auth_users) == 0:
-        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"","type":"","vm_id":"")
+        #         #a.add({"value":str(user_id),"key":"authorized_user"},"chapter":"host","name":"","type":"","vm_id":"","proxy":"")
         #         return {"message": "Already Unbinded"}
         #     else:
         #         if auth_users[0]["value"] == user_id :
@@ -536,6 +603,10 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
         if (action.environment_variables):
             log.info(action.environment_variables)
             await add_environment_variables(action.environment_variables)
+        if (action.ports):
+            log.info(action.ports)
+            await add_proxy_ports(action.ports, authorization)
+
         log.info(action.action_id)
         data={"action_id": action.action_id}
         #print("DATA: %s"%data)
@@ -543,6 +614,7 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
         log.info("Status Code %s"%str(response_action.status_code))
         log.info("JSON Response %s"%str(response_action.json()))
         log.info(response_action.json().keys())
+        """
         # Add ports 
         if "ports" in response_action.json().keys():
             if response_action.json()["ports"] != None:
@@ -554,13 +626,15 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                         port_db=a.getByQuery(query=q)
                         if len(port_db) == 0:
                             #Добавляем порт в локальную базу так как его нет
-                            a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),"type":str(port_add["type"]),"vm_id":str(port_add["vm_id"])})
+                            a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),
+                                "type":str(port_add["port_type"]),"vm_id":str(port_add["vm_id"])})
                         else:
                             #Если порт есть, удаляем его и его данные и добавляем по новой, для обновления записи. Почему не апдейт? Да хрен знает.
                             record_id=a.getByQuery(query=q)[0]["id"]
                             is_deleted = a.deleteById(pk=record_id)
                             log.info(is_deleted)
-                            a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),"type":str(port_add["type"]),"vm_id":str(port_add["vm_id"])})
+                            a.add({"value":str(port_add["value"]),"key":"port","chapter":"host","name":str(port_add["name"]),
+                                "type":str(port_add["port_type"]),"vm_id":str(port_add["vm_id"])})
                     except Exception as inst:
                         log.info(inst)    
                 # Добавление всех портов в данные по хосту и отправка нового набора
@@ -586,7 +660,7 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                 response = requests.post("%s/back/ports-update"%BACK, headers=headers, json=data)
                 log.info("Status Code %s"%str(response.status_code))
                 log.info("JSON Response %s"%str(response.json()))
-
+        """
         log.info("Start Action")
         full_stdout, full_stderr = await action_execute(response_action.json())
         return {"Detail":"Execute action", "full_stdout": full_stdout, "full_stderr": full_stderr}
