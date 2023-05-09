@@ -249,16 +249,14 @@ while True:
     log.info("Status Code %s", str(response.status_code))
     log.info("JSON Response %s", str(response.json()))
 
-
     #if 'action_timeout' in action.keys():
     if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json():
         break
     
     time.sleep(60)
 
-
 #Запуск регистрации порта агента
-log.info("Agent port register proxy_addr:%s proxy_ext_addr:%s proxy_ext_port:%s AGENT_PORP:%s"%(str(response.json()["proxy_addr"]), 
+log.info("Agent port register proxy_addr:%s proxy_ext_addr:%s proxy_ext_port:%s AGENT_PORT:%s"%(str(response.json()["proxy_addr"]), 
     str(response.json()["proxy_ext_addr"]), str(response.json()["proxy_ext_port"]), AGENT_PORT))
 
 # Тред тоннеля на прокси для агента
@@ -456,9 +454,6 @@ async def ping_root(authorization: Union[str, None] = Header(default=None)):
     #return {"Bearer": authorization}
     return {"host_id": host_id, "cores":HOST_CORES, "mem":HOST_MEM, "authorized_user":authorized_user}
 
-
-
-
 @app.get("/agent/bind", tags=["bind"])
 async def bind_host(authorization: Union[str, None] = Header(default=None)):
     log.info("Authorization: %s"%authorization)
@@ -602,9 +597,11 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
 
 
     if allowedExecution=="True":
+        # Добавляем переменные окружения до старта экшена
         if (action.environment_variables):
             log.info(action.environment_variables)
             await add_environment_variables(action.environment_variables)
+        # Добавляем порты для форвардинга
         if (action.ports):
             log.info(action.ports)
             await add_proxy_ports(action.ports, authorization)
