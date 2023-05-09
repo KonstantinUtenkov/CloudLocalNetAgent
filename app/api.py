@@ -179,7 +179,9 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
-            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port, 
+                '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 
+                'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
             time.sleep(60)
@@ -200,7 +202,9 @@ def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, pr
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
-            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port,  '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward_port.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
+            stdout, stderr = Popen(['ssh', '-N', '-R', proxy_external_addr+':'+proxy_external_port+':' + proxy_internal_addr + ':'+proxy_internal_port, 
+                '-o', 'ServerAliveInterval=10', '-o', 'ExitOnForwardFailure=yes', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=no', 
+                'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward_port.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
             time.sleep(60)
@@ -234,10 +238,9 @@ while True:
         log.info(inst)
 
     for port_one in port_db:
-        tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"],"proxy":port_one["proxy"] }
+        tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"],"proxy":port_one["proxy"]}
         port_on_sent.append(tmp_port)
 
-    
     register_headers = {"Content-Type": "application/json"}
     register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT, "ports":port_on_sent}
     log.info(register_data)
@@ -255,29 +258,29 @@ while True:
 
 
 #Запуск регистрации порта агента
-log.info(str(response.json()["proxy_addr"]))
-log.info(str(response.json()["proxy_ext_addr"]))
-log.info(str(response.json()["proxy_ext_port"]))
-log.info(str(AGENT_PORT))
+log.info("Agent port register proxy_addr:%s proxy_ext_addr:%s proxy_ext_port:%s AGENT_PORP:%s"%(str(response.json()["proxy_addr"]), 
+    str(response.json()["proxy_ext_addr"]), str(response.json()["proxy_ext_port"]), AGENT_PORT))
 
-register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],"0.0.0.0",AGENT_PORT), daemon=True)
+# Тред тоннеля на прокси для агента
+register_thread = threading.Thread(target=register_port, name="Proxyng port", args=(response.json()["proxy_addr"],
+    response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],"0.0.0.0",AGENT_PORT), daemon=True)
 register_thread.start()
 
-# Запуск регитрации портов на разрешенных прокси
+# Запуск региcтрации портов на разрешенных прокси
 for forward_port_next in response.json()["ports"]:
     if forward_port_next["vm_id"] == "":
         addr_on_agent_side = "0.0.0.0"
     else:
         # Тут будет запрос IP адреса той виртуалки, порт которой надо прокинуть на прокси сервер
         addr_on_agent_side = "0.0.0.0"
-    register_thread = threading.Thread(target=register_port_ports, name="Proxyng port"+forward_port_next["name"], 
-        args=(forward_port_next["proxy_addr"], forward_port_next["proxy_ext_addr"], forward_port_next["proxy_ext_port"],"0.0.0.0",forward_port_next["value"]), daemon=True)
-    register_thread.start()
-    
+    # Если есть все данные для запуска, то пускаем, если нет - то тред тоннеля не запускается
+    if forward_port_next["proxy_addr"] != "" and forward_port_next["proxy_ext_addr"] != "" and forward_port_next["proxy_ext_port"] != "":
+        register_thread = threading.Thread(target=register_port_ports, name="Proxyng port"+forward_port_next["name"], 
+            args=(forward_port_next["proxy_addr"], forward_port_next["proxy_ext_addr"], forward_port_next["proxy_ext_port"],
+                "0.0.0.0",forward_port_next["value"]), daemon=True)
+        register_thread.start()
 
 #register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
-
-
 
 #Добавление переменных окружения в базу и в окружение
 async def add_environment_variables(envs):
