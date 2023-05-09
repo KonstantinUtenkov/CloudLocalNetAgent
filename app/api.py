@@ -268,6 +268,7 @@ register_thread.start()
 
 # Запуск региcтрации портов на разрешенных прокси
 for forward_port_next in response.json()["ports"]:
+    log.info("-------------regestry ports:   %s "%(forward_port_next))
     if forward_port_next["vm_id"] == "":
         addr_on_agent_side = "0.0.0.0"
     else:
