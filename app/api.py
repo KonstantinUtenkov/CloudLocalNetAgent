@@ -50,6 +50,15 @@ class Action(BaseModel):
     environment_variables: List[EnvVar]
     ports: List[proxyPorts]
 
+# Глобальные массивы
+# Массив флагов запуска треда на указанные порты
+portThreadStatus = {}
+
+# Функция идентификации портов в массиве, для отключения
+def port_ident(forward_port_next):
+    port_ident = "proxy" + forward_port_next["proxy_addr"] + "type_port" + forward_port_next["type_port"] + "value" + forward_port_next["value"] + "vm_id" + forward_port_next["vm_id"]
+    return port_ident
+
 #Создание каталогов под ключи
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent/.ssh'], stdout=PIPE, stderr=PIPE).communicate()
@@ -190,7 +199,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
         log.info(inst)
     return
 
-def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_addr, proxy_internal_port):
+def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_addr, proxy_internal_port,port_ident):
 #proxy_addr - Внешний адрес прокси-сервер, к которому коннектиться
 #proxy_external_addr - Адрес на прокси-сервере, НА который будет вывешиваться порт
 #proxy_external_port - Номер порта НА который будет прокситься порт
@@ -198,7 +207,7 @@ def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, pr
 #proxy_internal_port - Номер порта который будет проксится
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
 #ssh -N -R 20000:localhost:80 -o ServerAliveInterval=10 -o ExitOnForwardFailure=yes forward@192.168.1.116 -p 22 -i ~/.ssh/id_rsa
-    log.info("-------------regestry port ports      %s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
+    log.info("-------------regestry ports port   %s %s %s %s "%(proxy_addr, proxy_external_addr, proxy_external_port, proxy_internal_port))
     try:
         while True:
             #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
@@ -208,6 +217,8 @@ def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, pr
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
             time.sleep(60)
+            if portThreadStatus[port_ident]!="Running":
+                return
     except Exception as inst:
         allowedExecution=True
         log.info(inst)
@@ -265,19 +276,31 @@ register_thread = threading.Thread(target=register_port, name="Proxyng port", ar
 register_thread.start()
 
 # Запуск региcтрации портов на разрешенных прокси
-for forward_port_next in response.json()["ports"]:
-    log.info("-------------regestry ports:   %s "%(forward_port_next))
-    if forward_port_next["vm_id"] == "":
-        addr_on_agent_side = "0.0.0.0"
-    else:
-        # Тут будет запрос IP адреса той виртуалки, порт которой надо прокинуть на прокси сервер
-        addr_on_agent_side = "0.0.0.0"
-    # Если есть все данные для запуска, то пускаем, если нет - то тред тоннеля не запускается
-    if forward_port_next["proxy_addr"] != "" and forward_port_next["proxy_ext_addr"] != "" and forward_port_next["proxy_ext_port"] != "":
-        register_thread = threading.Thread(target=register_port_ports, name="Proxyng port"+forward_port_next["name"], 
-            args=(forward_port_next["proxy_addr"], forward_port_next["proxy_ext_addr"], forward_port_next["proxy_ext_port"],
-                "0.0.0.0",forward_port_next["value"]), daemon=True)
-        register_thread.start()
+def run_ports_forward(ports):
+    #for forward_port_next in response.json()["ports"]:
+    for forward_port_next in ports:
+        log.info("-------------regestry ports:   %s "%(forward_port_next))
+        if forward_port_next["vm_id"] == "":
+            addr_on_agent_side = "0.0.0.0"
+        else:
+            # Тут будет запрос IP адреса той виртуалки, порт которой надо прокинуть на прокси сервер
+            addr_on_agent_side = "0.0.0.0"
+        # Идентификатор треда который будет держать подключение с портом на прокси
+        #port_ident = "proxy" + forward_port_next["proxy_addr"] + "type_port" + forward_port_next["type_port"] + "value" + forward_port_next["value"] + "vm_id" + forward_port_next["vm_id"]
+        port_ident_value = port_ident(forward_port_next)
+        log.info("-------------regestry ports: port ident: %s  %s "%(port_ident_value,forward_port_next))
+
+        # Если есть все данные для запуска, то пускаем, если нет - то тред тоннеля не запускается
+        if forward_port_next["proxy_addr"] != "" and forward_port_next["proxy_ext_addr"] != "" and forward_port_next["proxy_ext_port"] != "":
+            # Ставим статус для того чтобы процесс мог отключится
+            portThreadStatus[port_ident_value]="Running"
+            register_thread = threading.Thread(target=register_port_ports, name="Proxyng port"+forward_port_next["name"], 
+                args=(forward_port_next["proxy_addr"], forward_port_next["proxy_ext_addr"], forward_port_next["proxy_ext_port"],
+                    addr_on_agent_side,forward_port_next["value"],port_ident_value ), daemon=True)
+            register_thread.start()
+
+
+run_ports_forward(response.json()["ports"])
 
 #register_port(response.json()["proxy_addr"],response.json()["proxy_ext_addr"],response.json()["proxy_ext_port"],AGENT_PORT)
 
@@ -322,7 +345,7 @@ async def add_proxy_ports(proxy_ports, authorization):
                 log.info(port_add)
                 # Проверка наличия порта в локальной базе и добавление если его нет, а если есть обновление данных(удаление и добавление по новой):
                 try:
-                    q = {"key": "port", "value": port_add.value, "vm_id": port_add.vm_id}
+                    q = {"key": "port", "value": port_add.value, "vm_id": port_add.vm_id, "type": port_add.port_type}
                     port_db=a.getByQuery(query=q)
                     if len(port_db) == 0:
                         #Добавляем порт в локальную базу так как его нет
@@ -361,10 +384,6 @@ async def add_proxy_ports(proxy_ports, authorization):
             log.info("Status Code %s"%str(response.status_code))
             log.info("JSON Response %s"%str(response.json()))
 
-
-
-
-# Запуск проксирования сохраненных портов(то есть надо запросить список сохраненных портов и их запроксировать)
 
 async def action_execute(action):
     log.info("execute action %s"%action)
@@ -478,6 +497,7 @@ async def bind_host(authorization: Union[str, None] = Header(default=None)):
             if len(auth_users) == 0:
                 a.add({"value":str(user_id),"key":"authorized_user","chapter":"host","name":"","type":"","vm_id":"","proxy":""})
                 #return {"Detail": "Success binded"}
+                run_ports_forward(response.json()["ports"])
                 return {"message": "OK"}
             else:
                 record_id=a.getByQuery(query=q)[0]["id"]
@@ -508,6 +528,11 @@ async def unbind_host(authorization: Union[str, None] = Header(default=None)):
     log.info("JSON Response %s"%str(response.json()))
     try:
         if response.json()["message"] == "OK":
+            # Stop all ports forward
+            for stop_port in portThreadStatus.keys():
+                portThreadStatus[stop_port] = "Stop"
+                log.info("Stop port index:%s"%(stop_port))
+
             try:
                 q = {"key": "authorized_user"}
                 auth_users=a.getByQuery(query=q)
