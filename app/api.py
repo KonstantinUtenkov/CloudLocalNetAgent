@@ -426,7 +426,8 @@ async def action_execute(action):
     full_stderr += str(stderr.decode('utf-8'))
 
     log.info("execute action %s"%action)
-    stdout, stderr = Popen(['/home/for_agent/action/' + str(action["id"]) + "/"+ str(action["source_path"]) + str(action["source_run_file"])], stdout=PIPE, stderr=PIPE).communicate(timeout=action_timeout)
+    stdout, stderr = Popen(['/home/for_agent/action/' + str(action["id"]) + "/"+ str(action["source_path"]) + str(action["source_run_file"])], 
+        cwd='/home/for_agent/action/' + str(action["id"]) + "/"+ str(action["source_path"]) ,stdout=PIPE, stderr=PIPE).communicate(timeout=action_timeout)
     #print(str(stdout.decode('utf-8')))
     #print(str(stderr.decode('utf-8')))
 
