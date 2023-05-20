@@ -193,7 +193,7 @@ def register_port(proxy_addr, proxy_external_addr, proxy_external_port, proxy_in
                 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
-            time.sleep(60)
+            time.sleep(5)
     except Exception as inst:
         allowedExecution=True
         log.info(inst)
@@ -216,7 +216,7 @@ def register_port_ports(proxy_addr, proxy_external_addr, proxy_external_port, pr
                 'forward@'+proxy_addr, '-p', '22', '-i', '/home/for_agent/.ssh/forward_port.id_rsa'], stdout=PIPE, stderr=PIPE).communicate()
             log.info(str(stdout.decode('utf-8')))
             log.info(str(stderr.decode('utf-8')))
-            time.sleep(60)
+            time.sleep(5)
             if portThreadStatus[port_ident]!="Running":
                 return
     except Exception as inst:
