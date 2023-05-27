@@ -74,13 +74,17 @@ BACK="https://dev.cloudlocalnet.com"
 # Get UUID from server
 
 def get_uuid():
-    headers = {"Content-Type": "application/json"}
-    data={}
-    response = requests.post("%s/back/uuid-query"%BACK, headers=headers, json=data)
-    log.info("Status Code %s", str(response.status_code))
-    log.info("JSON Response %s", str(response.json()))
-    return response.json()["host_id"]
-
+    try:
+        headers = {"Content-Type": "application/json"}
+        data={}
+        response = requests.post("%s/back/uuid-query"%BACK, headers=headers, json=data)
+        log.info("Status Code %s", str(response.status_code))
+        log.info("JSON Response %s", str(response.json()))
+        return response.json()["host_id"]
+    except Exception as inst:
+        log.info(inst)
+        blank = ""
+        return blank
 
 
 #Make host_id and add to file DB or find already known
@@ -252,16 +256,20 @@ while True:
         tmp_port = {"name":port_one["name"],"type_port":port_one["type"],"value":port_one["value"],"vm_id":port_one["vm_id"],"proxy":port_one["proxy"]}
         port_on_sent.append(tmp_port)
 
-    register_headers = {"Content-Type": "application/json"}
-    register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT, "ports":port_on_sent}
-    log.info(register_data)
-    response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
-    log.info(response)
-    log.info("Status Code %s", str(response.status_code))
-    log.info("JSON Response %s", str(response.json()))
+    try:
+        register_headers = {"Content-Type": "application/json"}
+        register_data={"host_id":HOST_UUID, "authorized_user":AUTHORIZED_USER, "host_key":PUBLIC_KEY_HOST, "host_name": HOSTNAME, "port_key": PUBLIC_KEY_HOST_PORT, "ports":port_on_sent}
+        log.info(register_data)
+        response = requests.post("%s/back/register-agent"%BACK, headers=register_headers, json=register_data)
+        log.info(response)
+        log.info("Status Code %s", str(response.status_code))
+        log.info("JSON Response %s", str(response.json()))
+    except Exception as inst:
+        response={}
+        log.info(inst)
 
     #if 'action_timeout' in action.keys():
-    if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json():
+    if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json().keys():
         break
     
     time.sleep(60)
