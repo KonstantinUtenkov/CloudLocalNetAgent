@@ -264,13 +264,14 @@ while True:
         log.info(response)
         log.info("Status Code %s", str(response.status_code))
         log.info("JSON Response %s", str(response.json()))
-    except Exception as inst:
-        response={}
-        log.info(inst)
 
-    #if 'action_timeout' in action.keys():
-    if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json().keys():
-        break
+        #if 'action_timeout' in action.keys():
+        if 'proxy_addr' in response.json().keys() and 'proxy_ext_addr' in response.json().keys() and 'proxy_ext_port' in response.json().keys():
+            break
+
+    except Exception as inst:
+        #response={}
+        log.info(inst)
     
     time.sleep(60)
 
