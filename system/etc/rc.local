@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#rm /var/lib/dhcp/dhclient.leases
+
+dhclient -r
+dhclient
+systemctl restart systemd-networkd
+
 echo 1 > /tmp/rc.local
 
 cd /opt/CloudLocalNetAgent
