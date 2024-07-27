@@ -726,6 +726,32 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
         return {"Detail":"Execute action denied"}
         
 
+
+
+@app.get("/agent/get_actions_logs", tags=["get_actions_logs"])
+async def get_actions_logs(authorization: Union[str, None] = Header(default=None)):
+    log.info("Authorization: %s"%authorization)
+
+    # Проверка прав, что юзер может исполнять экшн на этом хосту
+    headers = {"Content-Type": "application/json", "Authorization": authorization}
+    data ={"host_id":HOST_UUID}
+    response = requests.post("%s/back/check-permissions"%BACK, headers=headers, json=data)
+    log.info("Status Code %s"%str(response.status_code))
+    log.info("JSON Response %s"%str(response.json()))
+
+    allowedExecution = response.json()["allowedExecution"]
+
+    if allowedExecution=="True":
+
+        full_stdout = open('/home/for_agent/action_output_log.txt', 'r').read()
+        full_stderr = open('/home/for_agent/action_error_log.txt', 'r').read()
+
+        return {"Detail":"Get logs actions", "full_stdout": full_stdout, "full_stderr": full_stderr}
+    else:
+        return {"Detail":"Get actions logs denied"}
+        
+
+
 @app.get("/agent/cpuinfo", tags=["cpuinfo"])
 async def cpu_info():
     return {"cpuinfo": cpuinfo.get_cpu_info()}
