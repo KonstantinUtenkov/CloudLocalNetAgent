@@ -696,7 +696,11 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
                 log.info("JSON Response %s"%str(response.json()))
         """
         log.info("Start Action")
-        full_stdout, full_stderr = await action_execute(response_action.json())
+        try:
+            full_stdout, full_stderr = await action_execute(response_action.json())
+        except:
+            full_stdout = "ERROR execute action"
+            full_stderr = "ERROR execute action"
         return {"Detail":"Execute action", "full_stdout": full_stdout, "full_stderr": full_stderr}
     else:
         return {"Detail":"Execute action denied"}
