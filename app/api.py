@@ -9,6 +9,8 @@ import json
 import re
 import time
 
+from datetime import datetime, timedelta, date
+
 import traceback
 import subprocess
 import os
@@ -70,6 +72,20 @@ HOST_UUID=""
 #BACK="http://dev.cloudlocalnet.com:8000"
 BACK="https://dev.cloudlocalnet.com"
 
+def action_log(type_log, output):
+    if type_log == 'out':
+        logfile = '/home/for_agent/action_output_log.txt'
+    if type_log == 'err':
+        logfile = '/home/for_agent/action_error_log.txt'
+    f = open(logfile, 'a')
+    curdate = str(datetime.now())
+    f.write('\n')
+    f.write(curdate)
+    f.write('\n')
+    f.write(output)
+    f.write('\n')
+    f.close()
+    return
 
 # Get UUID from server
 
@@ -648,6 +664,8 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
         log.info("Status Code %s"%str(response_action.status_code))
         log.info("JSON Response %s"%str(response_action.json()))
         log.info(response_action.json().keys())
+        action_log('out', str(response_action.json()))
+
         """
         # Add ports 
         if "ports" in response_action.json().keys():
@@ -701,6 +719,8 @@ async def start_action(action: Action, authorization: Union[str, None] = Header(
         except:
             full_stdout = "ERROR execute action"
             full_stderr = "ERROR execute action"
+        action_log('out', full_stdout)
+        action_log('err', full_stderr)
         return {"Detail":"Execute action", "full_stdout": full_stdout, "full_stderr": full_stderr}
     else:
         return {"Detail":"Execute action denied"}
