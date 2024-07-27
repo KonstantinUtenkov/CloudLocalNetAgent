@@ -743,8 +743,12 @@ async def get_actions_logs(authorization: Union[str, None] = Header(default=None
 
     if allowedExecution=="True":
 
-        full_stdout = open('/home/for_agent/action_output_log.txt', 'r').read()
-        full_stderr = open('/home/for_agent/action_error_log.txt', 'r').read()
+        try:
+            full_stdout = open('/home/for_agent/action_output_log.txt', 'r').read()
+            full_stderr = open('/home/for_agent/action_error_log.txt', 'r').read()
+        except:
+            full_stdout = "no file"
+            full_stderr = "no file"
 
         return {"Detail":"Get logs actions", "full_stdout": full_stdout, "full_stderr": full_stderr}
     else:
