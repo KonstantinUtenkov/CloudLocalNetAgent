@@ -64,6 +64,7 @@ def port_ident(forward_port_next):
 #Создание каталогов под ключи
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent'], stdout=PIPE, stderr=PIPE).communicate()
 stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent/.ssh'], stdout=PIPE, stderr=PIPE).communicate()
+stdout, stderr = Popen(['mkdir', '-p', '/home/for_agent/action'], stdout=PIPE, stderr=PIPE).communicate()
 a=db.getDb("/home/for_agent/db.json")
 
 AGENT_PORT="7190"
@@ -438,17 +439,93 @@ async def action_execute(action):
     full_stdout += str(stdout.decode('utf-8'))
     full_stderr += str(stderr.decode('utf-8'))
 
-    log.info("clone action from source %s"%action["source"])
-    #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
-    stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
-    full_stdout += str(stdout.decode('utf-8'))
-    full_stderr += str(stderr.decode('utf-8'))
+    if action["auth_type"] == "log_pass":
+        log.info("auth_type log_pass")
+        log.info("clone action from source %s"%action["source"])
 
-    log.info("Set branch action from source %s"%action["branch"])
-    #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
-    stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
-    full_stdout += str(stdout.decode('utf-8'))
-    full_stderr += str(stderr.decode('utf-8'))
+        split_addr = action["source"].split('://')
+        log.info("split addr %s"%(str(split_addr)))
+
+        #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
+        stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(split_addr[0]) + '://' + str(action["source_credentials"]) + '@' + str(split_addr[1]),'/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+        log.info("Set branch action from source %s"%action["branch"])
+        #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
+        stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+
+    if action["auth_type"] == "token":
+
+        split_addr = action["source"].split('://')
+        log.info("split addr %s"%(str(split_addr)))
+
+        log.info("auth_type token")
+        log.info("clone action from source %s"%action["source"])
+
+
+        #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
+        stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(split_addr[0]) + '://' + str(action["source_credentials"]) + '@' + str(split_addr[1]),'/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+        log.info("Set branch action from source %s"%action["branch"])
+        #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
+        stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+
+    if action["auth_type"] == "private_key":
+
+        privkey_file = '/home/for_agent/action/privkey.txt'
+        f = open(privkey_file, 'w')
+        f.write(str(action["source_credentials"]))
+        f.write('\n')
+        f.close()
+
+
+        log.info("auth_type private_key")
+        log.info("clone action from source %s"%action["source"])
+        try:
+            stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE, env=dict(os.environ, GIT_SSH_COMMAND="ssh -i /home/for_agent/action/privkey.txt")).communicate(timeout=source_timeout)
+            #stdout, stderr = Popen([git_env_key, 'git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+        except Exception as inst:
+            stderr = inst
+            log.info(inst)
+
+        log.info("out: %s %s"%(str(stdout), str(stderr)))
+
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+        log.info("Set branch action from source %s"%action["branch"])
+        #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
+        stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+
+
+    else:
+        log.info("auth_type another")
+        log.info("clone action from source %s"%action["source"])
+        #stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/mnt/action/'+ str(action["id"])], stdout=PIPE, text=True).communicate()
+        stdout, stderr = Popen(['git', '-c', 'http.sslVerify=false', 'clone', str(action["source"]), '/home/for_agent/action/'+ str(action["id"])], stdout=PIPE, stderr=PIPE).communicate(timeout=source_timeout)
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+        log.info("Set branch action from source %s"%action["branch"])
+        #stdout_gitcheckout, stderr_gitcheckout = Popen(['cd','/mnt/action/'+ str(action["id"]),'&&', 'git checkout ' + str(action["branch"])], stdout=PIPE).communicate()
+        stdout, stderr = Popen(['git','checkout' , str(action["branch"])], stdout=PIPE, cwd='/home/for_agent/action/'+ str(action["id"]), stderr=PIPE).communicate()
+        full_stdout += str(stdout.decode('utf-8'))
+        full_stderr += str(stderr.decode('utf-8'))
+
+
+
 
     log.info("execute action %s"%action)
     stdout, stderr = Popen(['/home/for_agent/action/' + str(action["id"]) + "/"+ str(action["source_path"]) + str(action["source_run_file"])], 
