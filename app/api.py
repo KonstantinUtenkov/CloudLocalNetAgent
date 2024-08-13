@@ -116,7 +116,11 @@ while True:
             HOST_UUID=get_uuid()
             a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":"", "proxy":""})
         else:
-            HOST_UUID=host_uuid[0]["value"]
+            if host_uuid[0]["value"] == "":
+                HOST_UUID=get_uuid()
+                a.add({"value":HOST_UUID,"key":"host_id","chapter":"host","name":"","type":"","vm_id":"", "proxy":""})
+            else:
+                HOST_UUID=host_uuid[0]["value"]
     except Exception as inst:
         log.info(inst)
         #HOST_UUID=str(uuid.uuid4())
